@@ -190,16 +190,6 @@ export default function Auth() {
             </ul>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-slate-200 dark:border-dark-border/40">
-            <p className="text-[10px] text-slate-400 dark:text-dark-muted uppercase tracking-wider mb-2">Developed With</p>
-            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-zinc-400">
-              <span>React Vite</span>
-              <span className="text-slate-300 dark:text-dark-border">•</span>
-              <span>Groq AI</span>
-              <span className="text-slate-300 dark:text-dark-border">•</span>
-              <span>SQLite</span>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Auth Inputs */}
