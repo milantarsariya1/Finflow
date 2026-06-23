@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white transition-colors duration-200;
+    background-color: #f8fafc; /* Light fallback */
+  }
+  .dark body {
+    @apply bg-dark-bg text-dark-text selection:bg-brand-primary selection:text-dark-bg;
+    background-color: #141b22; /* Dark fallback */
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #141b22;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #384959;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #88bdf2;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Slide in animation utility */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Glow effect utility */
+.glow-primary {
+  box-shadow: 0 0 20px -5px rgba(136, 189, 242, 0.15);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px -5px rgba(143, 174, 152, 0.15);
+}
+
+.glow-rose {
+  box-shadow: 0 0 20px -5px rgba(204, 128, 133, 0.15);
+}
