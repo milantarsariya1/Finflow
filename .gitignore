@@ -30,3 +30,9 @@ dist-ssr
 .env.local
 .env.test
 .env.*.local
+
+# Databases and SQLite
+*.db
+*.db-journal
+*.sqlite
+prisma/dev.db
