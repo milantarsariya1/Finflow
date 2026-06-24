@@ -25,6 +25,17 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        'none': '0px',
+        'xs': '16px',
+        'sm': '16px',
+        DEFAULT: '16px',
+        'md': '16px',
+        'lg': '16px',
+        'xl': '16px',
+        '2xl': '16px',
+        '3xl': '16px',
       }
     },
   },

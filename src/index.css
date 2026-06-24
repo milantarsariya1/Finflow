@@ -13,6 +13,9 @@
     @apply bg-dark-bg text-dark-text selection:bg-brand-primary selection:text-dark-bg;
     background-color: #141b22; /* Dark fallback */
   }
+  div, .container {
+    @apply rounded-2xl;
+  }
 }
 
 /* Custom Scrollbars */

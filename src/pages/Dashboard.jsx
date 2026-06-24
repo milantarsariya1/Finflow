@@ -549,7 +549,7 @@ export default function Dashboard() {
                     </Pie>
                     <Tooltip 
                       formatter={(val) => [formatINR(val), 'Spent']}
-                      contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
+                      contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '16px' }}
                       itemStyle={{ color: '#f4f4f5', fontSize: '12px' }}
                     />
                     <Legend 
@@ -577,7 +577,7 @@ export default function Dashboard() {
                   <YAxis stroke="#71717a" fontSize={9} tickLine={false} />
                   <Tooltip
                     formatter={(val) => [formatINR(val), 'Amount Spent']}
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px' }}
+                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '16px' }}
                     itemStyle={{ color: '#f4f4f5', fontSize: '12px' }}
                   />
                   <Line 
