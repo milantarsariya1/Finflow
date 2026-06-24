@@ -714,7 +714,7 @@ export default function Dashboard() {
       <footer className="mt-12 border-t border-slate-200/60 dark:border-dark-border/40 pt-6 text-center text-xs text-slate-500 dark:text-dark-muted">
         <EducationalDisclaimer />
         <p className="mt-4 font-semibold tracking-wider text-[10px] uppercase text-slate-400 dark:text-zinc-500">
-          Made with <span className="text-rose-500 animate-pulse">♥</span> by Milan Tarsariya
+          Made by Milan Tarsariya
         </p>
       </footer>
 

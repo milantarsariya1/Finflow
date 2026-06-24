@@ -433,7 +433,7 @@ export default function Advisor() {
         <div className="lg:col-span-3 space-y-2 bg-white border border-slate-200 dark:bg-dark-panel dark:border-dark-border rounded-3xl p-4.5 shadow-sm">
           <button
             onClick={() => setActiveTab('emergency')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               activeTab === 'emergency' 
                 ? 'bg-blue-600 text-white border-blue-600 dark:bg-brand-primary dark:text-dark-bg dark:border-brand-primary dark:glow-primary' 
                 : 'text-slate-600 border-transparent bg-transparent hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:border-transparent dark:hover:text-white dark:hover:bg-dark-card/50'
@@ -445,7 +445,7 @@ export default function Advisor() {
 
           <button
             onClick={() => setActiveTab('fd')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               activeTab === 'fd' 
                 ? 'bg-blue-600 text-white border-blue-600 dark:bg-brand-primary dark:text-dark-bg dark:border-brand-primary dark:glow-primary' 
                 : 'text-slate-600 border-transparent bg-transparent hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:border-transparent dark:hover:text-white dark:hover:bg-dark-card/50'
@@ -457,7 +457,7 @@ export default function Advisor() {
 
           <button
             onClick={() => setActiveTab('sip')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               activeTab === 'sip' 
                 ? 'bg-blue-600 text-white border-blue-600 dark:bg-brand-primary dark:text-dark-bg dark:border-brand-primary dark:glow-primary' 
                 : 'text-slate-600 border-transparent bg-transparent hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:border-transparent dark:hover:text-white dark:hover:bg-dark-card/50'
@@ -469,7 +469,7 @@ export default function Advisor() {
 
           <button
             onClick={() => setActiveTab('compare')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               activeTab === 'compare' 
                 ? 'bg-blue-600 text-white border-blue-600 dark:bg-brand-primary dark:text-dark-bg dark:border-brand-primary dark:glow-primary' 
                 : 'text-slate-600 border-transparent bg-transparent hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:border-transparent dark:hover:text-white dark:hover:bg-dark-card/50'
@@ -481,7 +481,7 @@ export default function Advisor() {
 
           <button
             onClick={() => setActiveTab('goals')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
               activeTab === 'goals' 
                 ? 'bg-blue-600 text-white border-blue-600 dark:bg-brand-primary dark:text-dark-bg dark:border-brand-primary dark:glow-primary' 
                 : 'text-slate-600 border-transparent bg-transparent hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:border-transparent dark:hover:text-white dark:hover:bg-dark-card/50'
