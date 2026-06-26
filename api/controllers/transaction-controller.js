@@ -1,4 +1,4 @@
-﻿import prisma from '../config/db.js';
+import prisma from '../config/db.js';
 import OpenAI from 'openai';
 
 const groq = process.env.GROQ_API_KEY
@@ -222,7 +222,7 @@ Rules:
     { type: 'expense', amount: 210, category: 'Food', note: 'Zomato weekend order', date: dateRange[26] },
     { type: 'expense', amount: 660, category: 'Bills', note: 'Internet bill', date: dateRange[27] },
     { type: 'expense', amount: 130, category: 'Food', note: 'Chai and samosa break', date: dateRange[28] },
-    { type: 'expense', amount: 1500, category: 'Education', note: 'O'Reilly subscription', date: dateRange[29] },
+    { type: 'expense', amount: 1500, category: 'Education', note: "O'Reilly subscription", date: dateRange[29] },
   ];
 
   let generatedTransactions = fallbackTransactions;
