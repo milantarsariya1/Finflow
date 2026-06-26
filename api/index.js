@@ -19,7 +19,8 @@ import {
   getMonthlyInsight,
   checkAffordability,
   getGeneralAdvisor,
-  getExplainResult
+  getExplainResult,
+  getSeedData
 } from './controllers/ai-controller.js';
 
 // Import JWT middleware
@@ -74,6 +75,7 @@ router.post('/ai/monthly-insight', getMonthlyInsight);
 router.post('/ai/affordability', checkAffordability);
 router.post('/ai/advisor', getGeneralAdvisor);
 router.post('/ai/explain-result', getExplainResult);
+router.post('/ai/seed-data', getSeedData);
 
 // Health check
 router.get('/health', (req, res) => {

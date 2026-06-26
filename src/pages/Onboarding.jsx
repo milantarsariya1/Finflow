@@ -1,108 +1,55 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash, Wallet, Landmark, PiggyBank, ArrowRight, Sparkles, X, Key, Eye, EyeOff, Bot, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Trash, Wallet, Landmark, PiggyBank, ArrowRight, Sparkles, X, Bot, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatINR } from '../utils/formatters';
 
 // ─── AI Seed Modal ────────────────────────────────────────────────────────────
 function SeedWithAIModal({ onClose, onSeed }) {
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
+  const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('input'); // 'input' | 'generating' | 'done'
-
-  const GROQ_PROMPT = `You are a financial data generator for an Indian personal finance app.
-Generate realistic financial seed data for a mid-level software professional in India.
-Respond ONLY with a valid JSON object (no markdown, no explanation). The JSON must have exactly these keys:
-
-{
-  "monthlyIncome": <number, net monthly salary in INR, e.g. 85000>,
-  "bankBalance": <number, current bank balance in INR, e.g. 220000>,
-  "savings": <number, existing savings/FD/liquidity separate from bank, e.g. 150000>,
-  "fixedExpenses": [
-    { "name": "<expense name>", "amount": <number> },
-    ...
-  ]
-}
-
-Rules:
-- monthlyIncome should be between 40000 and 200000
-- bankBalance should be between 50000 and 500000
-- savings should be between 0 and 1000000
-- fixedExpenses should have 3-6 realistic items (Rent, EMI, Insurance, WiFi, Gym, Subscriptions etc.)
-- All amounts must be realistic positive numbers
-- Vary the data to make it feel real and specific, not round numbers`;
+  const [step, setStep] = useState('confirm'); // 'confirm' | 'generating' | 'done'
 
   const handleSeed = async () => {
-    if (!apiKey.trim()) {
-      setError('Please enter your Groq API key.');
-      return;
-    }
-    if (!apiKey.trim().startsWith('gsk_')) {
-      setError('Invalid Groq API key format. It should start with "gsk_".');
-      return;
-    }
-
     setError('');
     setLoading(true);
     setStep('generating');
 
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('/api/ai/seed-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey.trim()}`,
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          model: 'llama3-8b-8192',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a financial data generator. Always respond with valid JSON only, no markdown fences, no explanation.'
-            },
-            {
-              role: 'user',
-              content: GROQ_PROMPT
-            }
-          ],
-          temperature: 0.9,
-          max_tokens: 512,
-          response_format: { type: 'json_object' }
-        })
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        const msg = errData?.error?.message || `Groq API error (${response.status})`;
-        throw new Error(msg);
+        throw new Error(errData?.message || `Server error (${response.status})`);
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error('No content returned from Groq.');
-
-      const parsed = JSON.parse(content);
 
       if (
-        typeof parsed.monthlyIncome !== 'number' ||
-        typeof parsed.bankBalance !== 'number' ||
-        !Array.isArray(parsed.fixedExpenses)
+        typeof data.monthlyIncome !== 'number' ||
+        typeof data.bankBalance !== 'number' ||
+        !Array.isArray(data.fixedExpenses)
       ) {
-        throw new Error('Groq returned unexpected data format. Please try again.');
+        throw new Error('Unexpected data format from server. Please try again.');
       }
 
       setStep('done');
       setTimeout(() => {
-        onSeed(parsed);
+        onSeed(data);
         onClose();
       }, 800);
 
     } catch (err) {
-      console.error('Groq seed error:', err);
-      setError(err.message || 'Failed to generate data. Please check your API key and try again.');
-      setStep('input');
+      console.error('Seed error:', err);
+      setError(err.message || 'Failed to generate data. Please try again.');
+      setStep('confirm');
     } finally {
       setLoading(false);
     }
@@ -111,7 +58,7 @@ Rules:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border rounded-2xl shadow-2xl p-6 animate-slide-up z-10">
+      <div className="relative w-full max-w-sm bg-white dark:bg-dark-panel border border-slate-200 dark:border-dark-border rounded-2xl shadow-2xl p-6 animate-slide-up z-10">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:text-dark-muted dark:hover:text-white transition-colors cursor-pointer bg-transparent border-0"
@@ -119,52 +66,23 @@ Rules:
           <X size={18} />
         </button>
 
+        {/* Header */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
             <Bot size={20} className="text-white" />
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-800 dark:text-white">Seed with AI</h2>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">Auto-fill your financial profile using Groq AI</p>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Auto-fill form with a realistic profile</p>
           </div>
         </div>
 
-        {step === 'input' && (
+        {/* Step: Confirm */}
+        {step === 'confirm' && (
           <>
-            <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/40 rounded-xl p-3 mb-5">
+            <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/40 rounded-xl p-3.5 mb-5">
               <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
-                Groq will generate a realistic Indian professional financial profile and auto-fill all fields. Your API key is used only for this request and never stored.
-              </p>
-            </div>
-
-            <div className="mb-5">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-zinc-400 mb-2 uppercase tracking-wide">
-                Groq API Key
-              </label>
-              <div className="relative">
-                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-dark-muted" size={16} />
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSeed()}
-                  placeholder="gsk_••••••••••••••••••••"
-                  className="w-full bg-slate-50 border border-slate-200 dark:bg-dark-card dark:border-dark-border rounded-xl py-3 pl-10 pr-10 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-violet-500 dark:focus:border-violet-500 transition-all font-mono"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-dark-muted dark:hover:text-white bg-transparent border-0 cursor-pointer transition-colors"
-                >
-                  {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400 dark:text-dark-muted mt-1.5">
-                Get your free API key at{' '}
-                <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-violet-500 hover:underline">
-                  console.groq.com
-                </a>
+                Groq AI will generate a realistic Indian professional's financial profile and auto-fill all onboarding fields. You can edit any value before submitting.
               </p>
             </div>
 
@@ -177,7 +95,7 @@ Rules:
 
             <button
               onClick={handleSeed}
-              disabled={loading || !apiKey.trim()}
+              disabled={loading}
               className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl py-3 font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md shadow-purple-500/20"
             >
               <Sparkles size={16} />
@@ -186,6 +104,7 @@ Rules:
           </>
         )}
 
+        {/* Step: Generating */}
         {step === 'generating' && (
           <div className="py-8 flex flex-col items-center gap-4 text-center">
             <div className="relative">
@@ -196,11 +115,12 @@ Rules:
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-white">Groq AI is generating...</p>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Crafting a realistic financial profile for you</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Crafting a realistic financial profile</p>
             </div>
           </div>
         )}
 
+        {/* Step: Done */}
         {step === 'done' && (
           <div className="py-8 flex flex-col items-center gap-4 text-center">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">

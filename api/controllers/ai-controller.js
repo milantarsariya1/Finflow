@@ -303,3 +303,49 @@ User context: Fixed monthly commitments: ${formatINR(userContext.fixedExpenses |
     res.status(500).json({ message: 'Error generating calculation explanation' });
   }
 }
+
+/**
+ * POST /api/ai/seed-data
+ * Generates a realistic Indian financial profile to auto-fill the onboarding form.
+ * Uses the server-side GROQ_API_KEY — no key required from the user.
+ */
+export async function getSeedData(req, res) {
+  const systemPrompt = `You are a financial data generator for an Indian personal finance app.
+Generate realistic financial seed data for a mid-level software professional in India.
+Respond ONLY with a valid JSON object. No markdown, no explanation, just raw JSON.`;
+
+  const userPrompt = `Generate a realistic financial profile with these exact keys:
+{
+  "monthlyIncome": <number, net monthly salary in INR between 40000-200000>,
+  "bankBalance": <number, current bank balance in INR between 50000-500000>,
+  "savings": <number, existing savings/FD separate from bank between 0-1000000>,
+  "fixedExpenses": [
+    { "name": "<expense name>", "amount": <number> }
+  ]
+}
+Rules:
+- fixedExpenses must have 4-6 realistic items (e.g. Rent, EMI, Insurance, WiFi, OTT Subscriptions, Gym)
+- All numbers must be realistic, not perfectly round
+- Vary the profile each time so it feels like a real person`;
+
+  const fallback = () => ({
+    monthlyIncome: 72000,
+    bankBalance: 185000,
+    savings: 95000,
+    fixedExpenses: [
+      { name: 'Rent', amount: 18000 },
+      { name: 'Home Loan EMI', amount: 12500 },
+      { name: 'Health Insurance', amount: 2200 },
+      { name: 'WiFi & Mobile', amount: 1299 },
+      { name: 'OTT Subscriptions', amount: 649 },
+    ],
+  });
+
+  try {
+    const result = await queryGroq(systemPrompt, userPrompt, fallback);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Seed data generation error:', error);
+    res.status(500).json({ message: 'Failed to generate seed data' });
+  }
+}
