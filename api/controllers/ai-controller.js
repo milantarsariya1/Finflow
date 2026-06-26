@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+﻿import OpenAI from 'openai';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let openai = null;
@@ -304,14 +304,13 @@ User context: Fixed monthly commitments: ${formatINR(userContext.fixedExpenses |
   }
 }
 
+
 /**
  * POST /api/ai/seed-data
- * Generates a realistic Indian financial profile to auto-fill the onboarding form.
- * Uses the server-side GROQ_API_KEY — no key required from the user.
- * Fully randomized per call to prevent Groq cache hits.
+ * Live Groq generation every call — zero stored static data.
+ * Randomized persona + unique nonce busts cache and guarantees unique output.
  */
 export async function getSeedData(req, res) {
-  // Random persona pools
   const CITIES = ['Bangalore', 'Mumbai', 'Hyderabad', 'Pune', 'Chennai', 'Delhi', 'Noida', 'Gurgaon'];
   const PROFESSIONS = [
     'mid-level backend engineer at a product startup',
@@ -329,111 +328,52 @@ export async function getSeedData(req, res) {
   const LIVING = [
     'living alone in a rented apartment',
     'sharing a 2BHK with one flatmate',
-    'living with family (no rent)',
-    'living in a company-provided PG accommodation',
-    'owning a flat with a home loan EMI',
+    'living with family - no rent expense',
+    'staying in a company-provided PG',
+    'owning a flat with an active home loan EMI',
   ];
 
-  const randomCity       = CITIES[Math.floor(Math.random() * CITIES.length)];
-  const randomProfession = PROFESSIONS[Math.floor(Math.random() * PROFESSIONS.length)];
-  const randomExp        = EXPERIENCE[Math.floor(Math.random() * EXPERIENCE.length)];
-  const randomLiving     = LIVING[Math.floor(Math.random() * LIVING.length)];
-  const nonce            = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const nonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-  // Distinct fallback profiles — randomly selected so offline mode also varies
-  const FALLBACK_PROFILES = [
-    {
-      monthlyIncome: 72000,
-      bankBalance: 185000,
-      savings: 95000,
-      fixedExpenses: [
-        { name: 'Rent', amount: 18000 },
-        { name: 'Home Loan EMI', amount: 12500 },
-        { name: 'Health Insurance', amount: 2200 },
-        { name: 'WiFi & Mobile', amount: 1299 },
-        { name: 'OTT Subscriptions', amount: 649 },
-      ],
-    },
-    {
-      monthlyIncome: 118000,
-      bankBalance: 310000,
-      savings: 240000,
-      fixedExpenses: [
-        { name: 'Rent - 2BHK Koramangala', amount: 28000 },
-        { name: 'Term Insurance', amount: 3100 },
-        { name: 'Jio Fiber Broadband', amount: 999 },
-        { name: 'Gym Membership', amount: 1800 },
-        { name: 'Netflix + Hotstar', amount: 849 },
-        { name: 'Car EMI', amount: 14200 },
-      ],
-    },
-    {
-      monthlyIncome: 54000,
-      bankBalance: 97000,
-      savings: 45000,
-      fixedExpenses: [
-        { name: 'PG Accommodation', amount: 12000 },
-        { name: 'Bike Loan EMI', amount: 4500 },
-        { name: 'Airtel Postpaid', amount: 599 },
-        { name: 'Spotify Premium', amount: 119 },
-        { name: 'Health Insurance', amount: 1450 },
-      ],
-    },
-    {
-      monthlyIncome: 165000,
-      bankBalance: 480000,
-      savings: 620000,
-      fixedExpenses: [
-        { name: 'Home Loan EMI', amount: 42000 },
-        { name: 'Life Insurance (LIC)', amount: 8500 },
-        { name: 'BSNL Broadband', amount: 749 },
-        { name: 'Car EMI - Honda City', amount: 18500 },
-        { name: 'Society Maintenance', amount: 3200 },
-        { name: 'Mutual Fund SIP', amount: 15000 },
-      ],
-    },
-    {
-      monthlyIncome: 88000,
-      bankBalance: 225000,
-      savings: 155000,
-      fixedExpenses: [
-        { name: 'Rent - 1BHK Hinjewadi', amount: 16500 },
-        { name: 'SBI Personal Loan EMI', amount: 9800 },
-        { name: 'MSEB Electricity', amount: 1800 },
-        { name: 'ACT Fibernet', amount: 849 },
-        { name: 'Amazon Prime + Netflix', amount: 679 },
-        { name: 'Term Life Insurance', amount: 2300 },
-      ],
-    },
-  ];
+  const city = pick(CITIES);
+  const profession = pick(PROFESSIONS);
+  const exp = pick(EXPERIENCE);
+  const living = pick(LIVING);
 
   const systemPrompt =
     'You are a financial profile generator for an Indian personal finance app. ' +
-    'Every call must return a completely different and unique profile. ' +
-    'Respond ONLY with a valid JSON object. No markdown, no code fences, just raw JSON.';
+    'Generate completely fresh, unique, realistic data on every single call. Never repeat the same numbers. ' +
+    'Respond ONLY with a valid raw JSON object - no markdown, no code fences.';
 
   const userPrompt =
-    `[Request-ID: ${nonce}] Generate a realistic financial profile for a ${randomProfession} ` +
-    `with ${randomExp} of experience, based in ${randomCity}, ${randomLiving}.\n\n` +
-    `Return exactly this JSON structure:\n` +
-    `{\n` +
-    `  "monthlyIncome": <net monthly take-home in INR — realistic for profile>,\n` +
-    `  "bankBalance": <current savings account balance in INR>,\n` +
-    `  "savings": <FD / liquid fund / RD amount separate from bank account>,\n` +
-    `  "fixedExpenses": [\n` +
-    `    { "name": "<specific expense name>", "amount": <monthly INR amount> }\n` +
-    `  ]\n` +
-    `}\n\n` +
-    `Rules:\n` +
-    `- Income must be realistic for a ${randomExp} ${randomProfession} in ${randomCity} (range ₹35,000-₹2,50,000)\n` +
-    `- bankBalance should be 1.5-4x monthly income\n` +
-    `- savings between 0 and 15x monthly income\n` +
-    `- fixedExpenses: 4-6 items relevant to ${randomLiving} in ${randomCity}\n` +
-    `  (can include: Rent/EMI, loan EMIs, insurance, internet, gym, subscriptions, SIP, society maintenance)\n` +
-    `- Amounts must NOT be round numbers (avoid exact multiples of 1000)\n` +
-    `- Make it feel like a real unique person — vary everything`;
+    '[ID:' + nonce + '] Profile: ' + exp + ' ' + profession + ', ' + city + ', ' + living + '.\n' +
+    'Generate their current financial snapshot as JSON:\n' +
+    '{"monthlyIncome":<INR>,"bankBalance":<INR>,"savings":<INR>,"fixedExpenses":[{"name":"<name>","amount":<INR>}]}\n' +
+    'Rules:\n' +
+    '- monthlyIncome: realistic for ' + exp + ' ' + profession + ' in ' + city + '\n' +
+    '- bankBalance: 1.5-4x monthly income\n' +
+    '- savings: 0 to 15x monthly income (FD/RD/liquid fund, separate from bank)\n' +
+    '- fixedExpenses: 4-6 items matching "' + living + '" lifestyle in ' + city + '\n' +
+    '  Examples: rent/PG/home loan EMI, insurance, broadband, gym, SIP, vehicle EMI, subscriptions\n' +
+    '- All amounts must be non-round numbers (avoid exact multiples of 500 or 1000)\n' +
+    '- Vary aggressively - every call should feel like a completely different real person';
 
-  const fallback = () => FALLBACK_PROFILES[Math.floor(Math.random() * FALLBACK_PROFILES.length)];
+  // Minimal math-based emergency fallback - no static stored data at all
+  const fallback = () => {
+    const base = 45000 + Math.floor(Math.random() * 130000);
+    return {
+      monthlyIncome: base,
+      bankBalance: Math.floor(base * (1.5 + Math.random() * 2.5)),
+      savings: Math.floor(base * Math.random() * 8),
+      fixedExpenses: [
+        { name: 'Rent / Home EMI', amount: Math.floor(base * 0.22 + Math.random() * 3000) },
+        { name: 'Health Insurance', amount: 1200 + Math.floor(Math.random() * 2000) },
+        { name: 'Broadband & Mobile', amount: 700 + Math.floor(Math.random() * 800) },
+        { name: 'OTT Subscriptions', amount: 300 + Math.floor(Math.random() * 600) },
+      ],
+    };
+  };
 
   try {
     const result = await queryGroq(systemPrompt, userPrompt, fallback);
