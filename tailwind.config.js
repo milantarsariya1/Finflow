@@ -27,6 +27,7 @@ export default {
         sans: ['Inter', 'sans-serif'],
       },
       borderRadius: {
+        'xl': '16px',
         '2xl': '16px',
         '3xl': '16px',
       }

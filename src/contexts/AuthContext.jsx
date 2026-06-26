@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('finance_token'));
   const [loading, setLoading] = useState(true);
-  const [theme, setThemeState] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setThemeState] = useState(localStorage.getItem('theme') || 'light');
 
   // Handle theme state and syncing
   const handleThemeChange = (newTheme) => {
