@@ -1,4 +1,4 @@
-import prisma from '../config/db.js';
+﻿import prisma from '../config/db.js';
 import OpenAI from 'openai';
 
 const groq = process.env.GROQ_API_KEY
@@ -161,70 +161,129 @@ export async function seedTransactions(req, res) {
     return d.toISOString().split('T')[0];
   });
 
-  const SYSTEM_PROMPT = `You are a financial transaction data generator for an Indian personal finance app.
-Generate realistic day-to-day transactions for an Indian software professional over 30 days.
-Respond ONLY with a raw JSON object containing a "transactions" array. No markdown, no explanation.`;
-
-  const USER_PROMPT = `Generate 35-45 realistic daily transactions spread across these dates: ${dateRange.join(', ')}.
-
-Return a JSON object: { "transactions": [ ...array of transaction objects... ] }
-
-Each transaction object:
-{
-  "type": "expense" or "income",
-  "amount": <positive number in INR>,
-  "category": <one of: Food, Transport, Shopping, Entertainment, Bills, Medical, Education, Others, Salary, Bonus, Investments, Ad-hoc Income>,
-  "note": <short realistic description>,
-  "date": <one of the provided dates>
-}
-
-Rules:
-- 85-90% expenses, 10-15% income (freelance, cashback, reimbursements)
-- Food: Swiggy, Zomato, chai, snacks, restaurants (80-800)
-- Transport: Uber, Ola, metro, auto, fuel (50-600)
-- Shopping: Amazon, Flipkart, Myntra, grocery, DMart (200-3000)
-- Entertainment: Netflix, movies, weekend outing (150-800)
-- Bills: electricity, phone, internet (300-2000)
-- Medical: pharmacy, doctor (200-1500)
-- Education: Udemy, books, courses (300-2000)
-- Others: household, gifts, misc (100-1000)
-- Ad-hoc Income: freelance payment, cashback, reimbursement (500-8000)
-- Vary amounts — not perfectly round numbers
-- Multiple transactions on same day is realistic`;
-
-  const fallbackTransactions = [
-    { type: 'expense', amount: 180, category: 'Food', note: 'Lunch at office canteen', date: dateRange[0] },
-    { type: 'expense', amount: 350, category: 'Transport', note: 'Uber to office', date: dateRange[1] },
-    { type: 'expense', amount: 650, category: 'Shopping', note: 'Amazon grocery order', date: dateRange[2] },
-    { type: 'expense', amount: 299, category: 'Entertainment', note: 'Netflix subscription', date: dateRange[3] },
-    { type: 'expense', amount: 120, category: 'Food', note: 'Swiggy dinner', date: dateRange[4] },
-    { type: 'expense', amount: 85, category: 'Transport', note: 'Metro card recharge', date: dateRange[5] },
-    { type: 'income', amount: 3500, category: 'Ad-hoc Income', note: 'Freelance work payment', date: dateRange[6] },
-    { type: 'expense', amount: 450, category: 'Bills', note: 'Phone recharge', date: dateRange[7] },
-    { type: 'expense', amount: 230, category: 'Food', note: 'Zomato lunch order', date: dateRange[8] },
-    { type: 'expense', amount: 1200, category: 'Medical', note: 'Doctor consultation', date: dateRange[9] },
-    { type: 'expense', amount: 799, category: 'Education', note: 'Udemy course on sale', date: dateRange[10] },
-    { type: 'expense', amount: 540, category: 'Transport', note: 'Ola cab to client site', date: dateRange[11] },
-    { type: 'expense', amount: 2200, category: 'Shopping', note: 'Clothing from Myntra', date: dateRange[12] },
-    { type: 'expense', amount: 160, category: 'Food', note: 'Evening chai and snacks', date: dateRange[13] },
-    { type: 'income', amount: 1200, category: 'Ad-hoc Income', note: 'Amazon cashback credited', date: dateRange[14] },
-    { type: 'expense', amount: 320, category: 'Entertainment', note: 'Movie tickets (2)', date: dateRange[15] },
-    { type: 'expense', amount: 890, category: 'Bills', note: 'Electricity bill', date: dateRange[16] },
-    { type: 'expense', amount: 415, category: 'Food', note: 'Weekend brunch outing', date: dateRange[17] },
-    { type: 'expense', amount: 275, category: 'Transport', note: 'Auto + metro commute', date: dateRange[18] },
-    { type: 'expense', amount: 600, category: 'Others', note: 'Household items from DMart', date: dateRange[19] },
-    { type: 'expense', amount: 145, category: 'Food', note: 'Breakfast at Udupi cafe', date: dateRange[20] },
-    { type: 'expense', amount: 499, category: 'Entertainment', note: 'Spotify premium', date: dateRange[21] },
-    { type: 'expense', amount: 1800, category: 'Medical', note: 'Pharmacy medicines', date: dateRange[22] },
-    { type: 'expense', amount: 380, category: 'Transport', note: 'Fuel for bike', date: dateRange[23] },
-    { type: 'income', amount: 5000, category: 'Ad-hoc Income', note: 'Weekend freelance gig', date: dateRange[24] },
-    { type: 'expense', amount: 950, category: 'Shopping', note: 'Flipkart electronics', date: dateRange[25] },
-    { type: 'expense', amount: 210, category: 'Food', note: 'Zomato weekend order', date: dateRange[26] },
-    { type: 'expense', amount: 660, category: 'Bills', note: 'Internet bill', date: dateRange[27] },
-    { type: 'expense', amount: 130, category: 'Food', note: 'Chai and samosa break', date: dateRange[28] },
-    { type: 'expense', amount: 1500, category: 'Education', note: "O'Reilly subscription", date: dateRange[29] },
+  // Random persona arrays — forces unique output every call
+  const CITIES = ['Bangalore', 'Mumbai', 'Hyderabad', 'Pune', 'Chennai', 'Delhi', 'Noida', 'Gurgaon'];
+  const PROFESSIONS = [
+    'backend engineer at a startup',
+    'frontend developer at a mid-size SaaS company',
+    'data analyst at a fintech firm',
+    'product manager at an e-commerce company',
+    'DevOps engineer at an IT services company',
+    'mobile app developer working remotely',
+    'ML engineer at an AI startup',
+    'UX designer at a digital agency',
+  ];
+  const LIFESTYLES = [
+    'who goes out for lunch often and orders food delivery on weekends',
+    'who mostly cooks at home but splurges on gadgets and online shopping',
+    'who commutes by metro and spends heavily on entertainment and streaming',
+    'who rides a bike to work and prefers budget dining but invests in online courses',
+    'who takes cabs daily and enjoys weekend brunches and movies',
+    'who works from home, orders food delivery daily, and buys a lot from Amazon',
   ];
 
+  const randomCity       = CITIES[Math.floor(Math.random() * CITIES.length)];
+  const randomProfession = PROFESSIONS[Math.floor(Math.random() * PROFESSIONS.length)];
+  const randomLifestyle  = LIFESTYLES[Math.floor(Math.random() * LIFESTYLES.length)];
+  const randomCount      = 35 + Math.floor(Math.random() * 11); // 35-45
+  const nonce            = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  const SYSTEM_PROMPT =
+    'You are a financial transaction data generator for an Indian personal finance app. ' +
+    'Each call must produce completely different, unique, varied transactions. ' +
+    'Respond ONLY with a raw JSON object containing a "transactions" array. No markdown, no explanation.';
+
+  const USER_PROMPT =
+    `[Request-ID: ${nonce}] Generate exactly ${randomCount} realistic daily transactions ` +
+    `for a ${randomProfession} living in ${randomCity} ${randomLifestyle}.\n\n` +
+    `Spread across these dates: ${dateRange.join(', ')}\n\n` +
+    `Return: { "transactions": [ { "type": "expense"|"income", "amount": <INR number>, ` +
+    `"category": <one of Food/Transport/Shopping/Entertainment/Bills/Medical/Education/Others/Ad-hoc Income>, ` +
+    `"note": <specific realistic description with app or place name>, "date": <one of the dates above> }, ... ] }\n\n` +
+    `Profile for ${randomCity} ${randomProfession}:\n` +
+    `- 85% expenses, 15% income (freelance, cashback, reimbursement)\n` +
+    `- Food: Swiggy, Zomato, Dominos, local cafe, office canteen (80-800)\n` +
+    `- Transport: Uber, Ola, Rapido, metro, bus, petrol (50-600)\n` +
+    `- Shopping: Amazon, Flipkart, Myntra, Blinkit, Zepto, BigBasket (150-3500)\n` +
+    `- Entertainment: BookMyShow, Netflix, Spotify, weekend outing (99-900)\n` +
+    `- Bills: phone recharge, electricity, broadband (200-2000)\n` +
+    `- Medical: Apollo pharmacy, clinic, lab test (150-2000)\n` +
+    `- Education: Udemy, Coursera, tech books (200-2500)\n` +
+    `- Others: laundry, haircut, gift, stationery (80-800)\n` +
+    `- Ad-hoc Income: freelance gig, referral bonus, cashback (500-8000)\n` +
+    `- Notes must be specific: e.g. "Swiggy - Biryani from Paradise", "Uber to Koramangala office"\n` +
+    `- Vary amounts — avoid perfectly round numbers like 500, 1000\n` +
+    `- Some days have 3-4 transactions, some days only 1 — be realistic`;
+
+  const fallbackSets = [
+    [
+      { type: 'expense', amount: 183, category: 'Food', note: 'Swiggy - Butter Chicken from Behrouz', date: dateRange[0] },
+      { type: 'expense', amount: 347, category: 'Transport', note: 'Uber to Whitefield office', date: dateRange[1] },
+      { type: 'expense', amount: 1249, category: 'Shopping', note: 'Amazon - Laptop stand + USB hub', date: dateRange[2] },
+      { type: 'expense', amount: 299, category: 'Entertainment', note: 'Netflix monthly plan', date: dateRange[3] },
+      { type: 'expense', amount: 127, category: 'Food', note: 'Zomato - Veg Thali lunch', date: dateRange[4] },
+      { type: 'expense', amount: 89, category: 'Transport', note: 'Metro card top-up', date: dateRange[5] },
+      { type: 'income', amount: 4500, category: 'Ad-hoc Income', note: 'Weekend freelance API project', date: dateRange[6] },
+      { type: 'expense', amount: 455, category: 'Bills', note: 'Airtel postpaid bill', date: dateRange[7] },
+      { type: 'expense', amount: 212, category: 'Food', note: 'Dominos - Medium pizza combo', date: dateRange[8] },
+      { type: 'expense', amount: 1150, category: 'Medical', note: 'Apollo Pharmacy - BP medicines', date: dateRange[9] },
+      { type: 'expense', amount: 799, category: 'Education', note: 'Udemy - React Native course', date: dateRange[10] },
+      { type: 'expense', amount: 523, category: 'Transport', note: 'Ola cab to airport drop', date: dateRange[11] },
+      { type: 'expense', amount: 2199, category: 'Shopping', note: 'Myntra - 2 shirts + chinos', date: dateRange[12] },
+      { type: 'expense', amount: 165, category: 'Food', note: 'Evening chai and samosa - office canteen', date: dateRange[13] },
+      { type: 'income', amount: 1280, category: 'Ad-hoc Income', note: 'Flipkart SuperCoin cashback', date: dateRange[14] },
+      { type: 'expense', amount: 318, category: 'Entertainment', note: 'BookMyShow - 2 tickets Kalki 2898', date: dateRange[15] },
+      { type: 'expense', amount: 867, category: 'Bills', note: 'BESCOM electricity bill', date: dateRange[16] },
+      { type: 'expense', amount: 423, category: 'Food', note: 'Weekend brunch at Third Wave Coffee', date: dateRange[17] },
+      { type: 'expense', amount: 278, category: 'Transport', note: 'Rapido bike + metro - daily commute', date: dateRange[18] },
+      { type: 'expense', amount: 612, category: 'Others', note: 'DMart monthly household shopping', date: dateRange[19] },
+      { type: 'expense', amount: 142, category: 'Food', note: 'Breakfast at Udupi Darshini', date: dateRange[20] },
+      { type: 'expense', amount: 499, category: 'Entertainment', note: 'Spotify Premium 3-month plan', date: dateRange[21] },
+      { type: 'expense', amount: 1750, category: 'Medical', note: 'Thyrocare full body checkup', date: dateRange[22] },
+      { type: 'expense', amount: 383, category: 'Transport', note: 'Petrol top-up - Reliance petrol pump', date: dateRange[23] },
+      { type: 'income', amount: 6200, category: 'Ad-hoc Income', note: 'Saturday freelance design sprint', date: dateRange[24] },
+      { type: 'expense', amount: 947, category: 'Shopping', note: 'Blinkit - Grocery + snacks weekly order', date: dateRange[25] },
+      { type: 'expense', amount: 218, category: 'Food', note: 'Zomato - Shawarma + fries Friday dinner', date: dateRange[26] },
+      { type: 'expense', amount: 649, category: 'Bills', note: 'ACT Fibernet broadband bill', date: dateRange[27] },
+      { type: 'expense', amount: 135, category: 'Food', note: 'Morning chai + biscuits at Cafe Coffee Day', date: dateRange[28] },
+      { type: 'expense', amount: 1499, category: 'Education', note: 'Coursera - ML specialization month', date: dateRange[29] },
+    ],
+    [
+      { type: 'expense', amount: 267, category: 'Food', note: 'Zomato - Paneer butter masala + naan', date: dateRange[0] },
+      { type: 'expense', amount: 189, category: 'Transport', note: 'Uber Pool to office', date: dateRange[1] },
+      { type: 'expense', amount: 3499, category: 'Shopping', note: 'Amazon - Mechanical keyboard', date: dateRange[2] },
+      { type: 'expense', amount: 149, category: 'Entertainment', note: 'YouTube Premium monthly', date: dateRange[3] },
+      { type: 'expense', amount: 95, category: 'Food', note: 'Swiggy Instamart - quick snacks', date: dateRange[4] },
+      { type: 'income', amount: 2800, category: 'Ad-hoc Income', note: 'Company reimbursement - internet bill', date: dateRange[5] },
+      { type: 'expense', amount: 731, category: 'Shopping', note: 'BigBasket monthly grocery', date: dateRange[6] },
+      { type: 'expense', amount: 398, category: 'Bills', note: 'Vi mobile prepaid recharge', date: dateRange[7] },
+      { type: 'expense', amount: 198, category: 'Food', note: 'KFC - Bucket meal lunch', date: dateRange[8] },
+      { type: 'expense', amount: 650, category: 'Medical', note: 'MedPlus pharmacy - vitamins and supplements', date: dateRange[9] },
+      { type: 'expense', amount: 1299, category: 'Education', note: 'O Reilly Learning Platform month', date: dateRange[10] },
+      { type: 'expense', amount: 412, category: 'Transport', note: 'Ola auto to railway station', date: dateRange[11] },
+      { type: 'expense', amount: 1875, category: 'Shopping', note: 'Flipkart - Running shoes', date: dateRange[12] },
+      { type: 'expense', amount: 243, category: 'Food', note: 'Swiggy - Biriyani special weekend order', date: dateRange[13] },
+      { type: 'income', amount: 750, category: 'Ad-hoc Income', note: 'PhonePe cashback on bill payment', date: dateRange[14] },
+      { type: 'expense', amount: 562, category: 'Entertainment', note: 'Lenskart - Sunglasses', date: dateRange[15] },
+      { type: 'expense', amount: 1124, category: 'Bills', note: 'TPDDL electricity quarterly bill', date: dateRange[16] },
+      { type: 'expense', amount: 378, category: 'Food', note: 'Lunch at Farzi Cafe with team', date: dateRange[17] },
+      { type: 'expense', amount: 145, category: 'Transport', note: 'DTC bus pass weekly', date: dateRange[18] },
+      { type: 'expense', amount: 489, category: 'Others', note: 'Barbershop + grooming products', date: dateRange[19] },
+      { type: 'expense', amount: 176, category: 'Food', note: 'McDonald breakfast combo', date: dateRange[20] },
+      { type: 'expense', amount: 779, category: 'Entertainment', note: 'INOX movie - weekend outing', date: dateRange[21] },
+      { type: 'expense', amount: 920, category: 'Medical', note: 'Dental clinic checkup', date: dateRange[22] },
+      { type: 'expense', amount: 267, category: 'Transport', note: 'Uber XL - office team outing', date: dateRange[23] },
+      { type: 'income', amount: 3500, category: 'Ad-hoc Income', note: 'Referral bonus - HDFC credit card', date: dateRange[24] },
+      { type: 'expense', amount: 1647, category: 'Shopping', note: 'Zepto - Household + dairy weekly stock', date: dateRange[25] },
+      { type: 'expense', amount: 334, category: 'Food', note: 'Swiggy Genie - food from local restaurant', date: dateRange[26] },
+      { type: 'expense', amount: 899, category: 'Bills', note: 'Jio Fiber monthly plan', date: dateRange[27] },
+      { type: 'expense', amount: 112, category: 'Food', note: 'Tea and snacks - office vending machine', date: dateRange[28] },
+      { type: 'expense', amount: 699, category: 'Shopping', note: 'Ajio - casual t-shirts 3-pack', date: dateRange[29] },
+    ],
+  ];
+
+  // Pick a random fallback set so even offline mode varies
+  const fallbackTransactions = fallbackSets[Math.floor(Math.random() * fallbackSets.length)];
   let generatedTransactions = fallbackTransactions;
 
   if (groq) {
@@ -235,7 +294,7 @@ Rules:
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: USER_PROMPT },
         ],
-        temperature: 1.0,
+        temperature: 1.1,
         max_tokens: 4096,
         response_format: { type: 'json_object' },
       });
