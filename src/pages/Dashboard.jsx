@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, Pencil, Sparkles, HelpCircle, ArrowUpRight, ArrowDownRight, 
-  Wallet, PiggyBank, Calendar, Tag, FileText, IndianRupee, Loader2, Info
+  Wallet, PiggyBank, Calendar, Tag, FileText, IndianRupee, Loader2, Info, Zap
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { formatINR, formatDate, formatPercent } from '../utils/formatters';
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [note, setNote] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [adding, setAdding] = useState(false);
+  const [seedingTransactions, setSeedingTransactions] = useState(false);
 
   const handleAddClick = () => {
     setEditingId(null);
@@ -73,6 +74,28 @@ export default function Dashboard() {
   const handleCloseForm = () => {
     setShowAddForm(false);
     setEditingId(null);
+  };
+
+  // Seed transactions via Groq AI (no popup — uses server-side key)
+  const handleSeedTransactions = async () => {
+    if (seedingTransactions) return;
+    setSeedingTransactions(true);
+    try {
+      const res = await fetch('/api/transactions/seed', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await fetchData();
+        await fetchUpdatedUser();
+      } else {
+        console.error('Seed transactions failed:', await res.text());
+      }
+    } catch (err) {
+      console.error('Seed transactions error:', err);
+    } finally {
+      setSeedingTransactions(false);
+    }
   };
 
   // AI Insights States
@@ -431,9 +454,23 @@ export default function Dashboard() {
           
           {/* Recent Ledger */}
           <div className="bg-white border border-slate-200 dark:bg-dark-panel dark:border-dark-border rounded-3xl p-6 relative shadow-sm">
-            <h3 className="text-lg md:text-xl font-extrabold text-slate-800 dark:text-white tracking-tight mb-5 text-left">
-              Recent Transactions Ledger
-            </h3>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg md:text-xl font-extrabold text-slate-800 dark:text-white tracking-tight text-left">
+                Recent Transactions Ledger
+              </h3>
+              <button
+                onClick={handleSeedTransactions}
+                disabled={seedingTransactions}
+                title="Auto-fill with AI-generated realistic transactions"
+                className="inline-flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-full shadow-md shadow-purple-500/20 transition-all duration-300 cursor-pointer disabled:opacity-60 group"
+              >
+                {seedingTransactions ? (
+                  <><Loader2 size={12} className="animate-spin" /><span>Seeding...</span></>
+                ) : (
+                  <><Zap size={12} className="group-hover:scale-110 transition-transform" /><span>Seed Transactions</span></>
+                )}
+              </button>
+            </div>
 
             {loadingTransactions ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-dark-muted">

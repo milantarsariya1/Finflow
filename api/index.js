@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 // Import controllers
 import { signup, login, getMe, onboarding, updateProfile, changePassword, getSecurityQuestion, resetPassword } from './controllers/auth-controller.js';
-import { addTransaction, getTransactions, deleteTransaction, updateTransaction } from './controllers/transaction-controller.js';
+import { addTransaction, getTransactions, deleteTransaction, updateTransaction, seedTransactions } from './controllers/transaction-controller.js';
 import {
   getSurplusStatus,
   getEmergencyStatus,
@@ -59,6 +59,7 @@ router.post('/transactions', addTransaction);
 router.get('/transactions', getTransactions);
 router.put('/transactions/:id', updateTransaction);
 router.delete('/transactions/:id', deleteTransaction);
+router.post('/transactions/seed', seedTransactions);
 
 // Advisor Calculations & Goals CRUD
 router.get('/advisor/surplus', getSurplusStatus);
