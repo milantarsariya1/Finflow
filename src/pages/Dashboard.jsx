@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, Pencil, Sparkles, HelpCircle, ArrowUpRight, ArrowDownRight, 
-  Wallet, PiggyBank, Calendar, Tag, FileText, IndianRupee, Loader2, Info, Zap
+  Wallet, PiggyBank, Calendar, Tag, FileText, IndianRupee, Loader2, Info, Zap, X
 } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { formatINR, formatDate, formatPercent } from '../utils/formatters';
@@ -42,6 +42,9 @@ export default function Dashboard() {
 
   // Transaction Form States
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAllTransactionsModal, setShowAllTransactionsModal] = useState(false);
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
+  const [deletingAll, setDeletingAll] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [type, setType] = useState('expense');
   const [amount, setAmount] = useState('');
@@ -201,6 +204,88 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Delete transaction failed:', err);
     }
+  };
+
+  // Delete all transactions
+  const handleDeleteAllTransactions = async () => {
+    if (!confirm('WARNING: Are you sure you want to delete ALL transactions? This will revert your bank balance changes and cannot be undone.')) return;
+    setDeletingAll(true);
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        setShowAllTransactionsModal(false);
+        await fetchData();
+        await fetchUpdatedUser();
+      } else {
+        console.error('Delete all transactions failed:', await res.text());
+      }
+    } catch (err) {
+      console.error('Delete all transactions error:', err);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
+  // Extract unique months from transactions for filtering & grouping
+  const getMonthsList = () => {
+    const months = new Set();
+    transactions.forEach(t => {
+      const d = new Date(t.date);
+      const year = d.getFullYear();
+      const month = d.getMonth(); // 0-11
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      months.add(key);
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a)); // newest first
+  };
+
+  const getMonthLabel = (monthKey) => {
+    if (!monthKey || monthKey === 'all') return 'All Months';
+    const [year, monthStr] = monthKey.split('-');
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return `${monthNames[parseInt(monthStr, 10) - 1]} ${year}`;
+  };
+
+  // Get transactions filtered by selectedMonthFilter
+  const getFilteredTransactions = () => {
+    if (selectedMonthFilter === 'all') return transactions;
+    return transactions.filter(t => {
+      const d = new Date(t.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return key === selectedMonthFilter;
+    });
+  };
+
+  // Calculate category breakdowns for a given set of transactions
+  const getCategoryBreakdown = (txList) => {
+    const expenses = txList.filter(t => t.type === 'expense');
+    const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+
+    const categoryTotals = {};
+    expenses.forEach(t => {
+      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+    });
+
+    // Sort categories by amount spent descending
+    return Object.entries(categoryTotals)
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getCategoryColor = (cat) => {
+    const idx = EXPENSE_CATEGORIES.indexOf(cat);
+    return idx !== -1 ? COLORS[idx] : '#cbd5e1';
   };
 
   // Fetch AI Insights
@@ -546,11 +631,22 @@ export default function Dashboard() {
                     ))}
                   </tbody>
                 </table>
-                {transactions.length > 10 && (
-                  <p className="text-[10px] text-slate-400 dark:text-dark-muted text-center mt-4">
-                    Showing 10 most recent transactions.
-                  </p>
-                )}
+                <div className="flex flex-col items-center gap-1.5 mt-5 pt-3 border-t border-slate-100 dark:border-dark-border/30">
+                  {transactions.length > 10 && (
+                    <p className="text-[10px] text-slate-400 dark:text-dark-muted">
+                      Showing 10 most recent transactions.
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedMonthFilter('all');
+                      setShowAllTransactionsModal(true);
+                    }}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-brand-primary dark:hover:text-brand-secondary hover:underline cursor-pointer flex items-center gap-1 bg-transparent border-0"
+                  >
+                    See More ({transactions.length} total entries)
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -876,6 +972,203 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ALL TRANSACTIONS MODAL LEDGER --- */}
+      {showAllTransactionsModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-4xl bg-white border border-slate-200 dark:bg-dark-panel dark:border-dark-border rounded-3xl p-6 md:p-8 shadow-2xl relative animate-slide-up text-left text-slate-800 dark:text-white max-h-[85vh] flex flex-col">
+            {/* Close button */}
+            <button
+              onClick={() => setShowAllTransactionsModal(false)}
+              className="absolute right-5 top-5 text-slate-400 hover:text-slate-600 dark:text-zinc-400 dark:hover:text-white bg-transparent border-0 cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-dark-border/40 mb-5">
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                  <Wallet className="text-blue-600 dark:text-brand-primary" size={20} />
+                  <span>Complete Transactions Ledger</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-dark-muted mt-1">
+                  Browse and manage all {transactions.length} entries.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 self-end md:self-auto">
+                {transactions.length > 0 && (
+                  <button
+                    onClick={handleDeleteAllTransactions}
+                    disabled={deletingAll}
+                    className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-brand-rose/10 dark:hover:bg-brand-rose/25 dark:text-brand-rose border border-rose-200/40 dark:border-brand-rose/20 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingAll ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                    <span>Delete All</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Main Modal Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden flex-1">
+              {/* Left Side: Filter & Category Breakdown */}
+              <div className="lg:col-span-5 flex flex-col gap-5 overflow-y-auto pr-1">
+                {/* Month Filter Selector */}
+                <div className="bg-slate-50 dark:bg-dark-card/40 border border-slate-100 dark:border-dark-border/40 rounded-2xl p-4">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+                    Filter by Month
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedMonthFilter}
+                      onChange={(e) => setSelectedMonthFilter(e.target.value)}
+                      className="w-full bg-white border border-slate-200 dark:bg-dark-card dark:border-dark-border rounded-xl py-2 px-3 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-brand-primary appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Months ({transactions.length})</option>
+                      {getMonthsList().map((m) => (
+                        <option key={m} value={m}>
+                          {getMonthLabel(m)} ({transactions.filter(t => {
+                            const d = new Date(t.date);
+                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === m;
+                          }).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Category-wise variable expenses breakdown */}
+                <div className="bg-slate-50 dark:bg-dark-card/40 border border-slate-100 dark:border-dark-border/40 rounded-2xl p-4 flex-1 flex flex-col min-h-[220px]">
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-3">
+                    Variable Expense Allocation
+                  </h4>
+
+                  {getCategoryBreakdown(getFilteredTransactions()).length === 0 ? (
+                    <div className="text-xs text-slate-400 dark:text-dark-muted py-8 text-center flex-1 flex items-center justify-center border border-dashed border-slate-200 dark:border-dark-border/40 rounded-xl bg-white dark:bg-dark-panel/20">
+                      No variable expense records in this period.
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 overflow-y-auto flex-1 pr-1">
+                      {getCategoryBreakdown(getFilteredTransactions()).map(({ category, amount, percentage }) => (
+                        <div key={category} className="space-y-1">
+                          <div className="flex justify-between text-xs font-medium">
+                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-zinc-300">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: getCategoryColor(category) }}
+                              />
+                              {category}
+                            </span>
+                            <span className="font-bold text-slate-800 dark:text-zinc-200">
+                              {formatINR(amount)} <span className="text-[10px] text-slate-400 dark:text-dark-muted font-normal">({percentage.toFixed(0)}%)</span>
+                            </span>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="w-full bg-slate-200/80 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${percentage}%`,
+                                backgroundColor: getCategoryColor(category)
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Side: Scrollable Transactions List */}
+              <div className="lg:col-span-7 flex flex-col overflow-hidden border border-slate-100 dark:border-dark-border/40 rounded-2xl bg-slate-50/50 dark:bg-dark-card/20 p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                    {getMonthLabel(selectedMonthFilter)} Records
+                  </h4>
+                  <span className="text-[10px] text-slate-400 dark:text-dark-muted font-bold">
+                    {getFilteredTransactions().length} entries found
+                  </span>
+                </div>
+
+                <div className="overflow-y-auto flex-1 pr-1 space-y-2.5">
+                  {getFilteredTransactions().length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center py-12 text-slate-400 dark:text-dark-muted">
+                      <span className="text-xs">No transactions match the filter.</span>
+                    </div>
+                  ) : (
+                    getFilteredTransactions().map((t) => (
+                      <div
+                        key={t.id}
+                        className="bg-white border border-slate-200 dark:bg-dark-panel dark:border-dark-border p-3.5 rounded-xl flex items-center justify-between hover:border-blue-500/30 dark:hover:border-zinc-700/60 transition-all duration-200 shadow-sm"
+                      >
+                        <div className="flex flex-col gap-1 text-left min-w-0 flex-1 pr-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex px-1.5 py-0.5 rounded-full font-bold text-[9px] ${
+                              t.type === 'income'
+                                ? 'bg-emerald-50 text-emerald-600 dark:bg-brand-emerald/10 dark:text-brand-emerald'
+                                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300'
+                            }`}>
+                              {t.category}
+                            </span>
+                            <span className="text-[10px] text-slate-400 dark:text-dark-muted font-medium">
+                              {formatDate(t.date)}
+                            </span>
+                          </div>
+                          <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 truncate" title={t.note}>
+                            {t.note || '—'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3.5 shrink-0">
+                          <span className={`text-xs font-bold ${
+                            t.type === 'income' ? 'text-emerald-600 dark:text-brand-emerald' : 'text-slate-800 dark:text-white'
+                          }`}>
+                            {t.type === 'income' ? '+' : '-'} {formatINR(t.amount, false)}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditClick(t)}
+                              className="text-slate-400 hover:text-blue-600 dark:text-dark-muted dark:hover:text-brand-primary bg-transparent border-0 cursor-pointer p-1 transition-colors"
+                              title="Edit Entry"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTransaction(t.id)}
+                              className="text-slate-400 hover:text-rose-600 dark:text-dark-muted dark:hover:text-brand-rose bg-transparent border-0 cursor-pointer p-1 transition-colors"
+                              title="Delete Entry"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Summary */}
+            <div className="flex items-center justify-between border-t border-slate-100 dark:border-dark-border/40 pt-4 mt-4 text-xs font-bold text-slate-500 dark:text-dark-muted">
+              <div>
+                Total Income: <span className="text-emerald-600 dark:text-brand-emerald">{formatINR(getFilteredTransactions().filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))}</span>
+              </div>
+              <div>
+                Total Expense: <span className="text-slate-800 dark:text-white">{formatINR(getFilteredTransactions().filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

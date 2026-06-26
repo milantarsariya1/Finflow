@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 // Import controllers
 import { signup, login, getMe, onboarding, updateProfile, changePassword, getSecurityQuestion, resetPassword } from './controllers/auth-controller.js';
-import { addTransaction, getTransactions, deleteTransaction, updateTransaction, seedTransactions } from './controllers/transaction-controller.js';
+import { addTransaction, getTransactions, deleteTransaction, updateTransaction, seedTransactions, deleteAllTransactions } from './controllers/transaction-controller.js';
 import {
   getSurplusStatus,
   getEmergencyStatus,
@@ -58,6 +58,7 @@ router.put('/auth/change-password', changePassword);
 router.post('/transactions', addTransaction);
 router.get('/transactions', getTransactions);
 router.put('/transactions/:id', updateTransaction);
+router.delete('/transactions', deleteAllTransactions);
 router.delete('/transactions/:id', deleteTransaction);
 router.post('/transactions/seed', seedTransactions);
 

@@ -1,4 +1,4 @@
-﻿import prisma from '../config/db.js';
+import prisma from '../config/db.js';
 import OpenAI from 'openai';
 
 const groq = process.env.GROQ_API_KEY
@@ -304,5 +304,47 @@ export async function seedTransactions(req, res) {
   } catch (error) {
     console.error('Seed transactions DB error:', error);
     res.status(500).json({ message: 'Error saving seeded transactions.' });
+  }
+}
+
+/**
+ * DELETE /api/transactions
+ * Deletes all transactions for the current user and adjusts bank balance.
+ */
+export async function deleteAllTransactions(req, res) {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { userId: req.userId },
+    });
+
+    if (transactions.length === 0) {
+      return res.status(200).json({ message: 'No transactions to delete.' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Reverting transactions: income is subtracted, expense is added back
+      const adjustment = transactions.reduce((sum, t) => {
+        return sum + (t.type === 'income' ? -t.amount : t.amount);
+      }, 0);
+
+      await tx.transaction.deleteMany({
+        where: { userId: req.userId },
+      });
+
+      const user = await tx.user.update({
+        where: { id: req.userId },
+        data: { bankBalance: { increment: adjustment } },
+      });
+
+      return { bankBalance: user.bankBalance };
+    });
+
+    res.status(200).json({
+      message: 'All transactions deleted successfully.',
+      bankBalance: result.bankBalance,
+    });
+  } catch (error) {
+    console.error('Delete all transactions error:', error);
+    res.status(500).json({ message: 'Error deleting all transactions.' });
   }
 }
